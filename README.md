@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Uangku
 
-## Getting Started
+Uangku adalah MVP manajemen transaksi keuangan pribadi berbasis Next.js, Server Actions, Prisma, dan PostgreSQL. Aplikasi ini mencatat pemasukan dan pengeluaran serta menghitung saldo dari data aktual di database.
 
-First, run the development server:
+> Aplikasi belum memiliki autentikasi atau isolasi data antar pengguna. Gunakan hanya di lingkungan lokal/pengembangan dengan akses terkontrol; jangan deploy secara publik dalam kondisi ini.
+
+## Menjalankan secara lokal
+
+Prasyarat: Node.js yang kompatibel dengan Next.js 16, npm, dan PostgreSQL.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Isi `DATABASE_URL` di `.env.local` dengan connection string PostgreSQL milik Anda, lalu jalankan:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run db:generate
+npm run db:migrate
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Buka <http://localhost:3000>.
 
-## Learn More
+## Perintah penting
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run lint       # ESLint
+npm run typecheck  # TypeScript
+npm run build      # production build
+npm run db:migrate # membuat/menerapkan migration development
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Untuk environment non-development, terapkan migration yang sudah tersedia dengan `npx prisma migrate deploy`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Arsitektur
 
-## Deploy on Vercel
+- `src/app` — route, layout, loading, dan error boundary.
+- `src/features/transactions` — komponen, Server Actions, schema validasi, dan tipe transaksi.
+- `src/lib/prisma.ts` — singleton Prisma Client.
+- `prisma/schema.prisma` — model database.
+- `prisma/migrations` — migration SQL yang dapat direview dan diterapkan.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Halaman dashboard adalah Server Component. Data dibaca langsung melalui Prisma, sedangkan dialog/form interaktif menjadi Client Components. Semua mutasi melewati Server Actions dan validasi Zod di server. Nominal disimpan sebagai `BIGINT` rupiah utuh dan dikonversi ke string saat melewati batas server-client agar tidak kehilangan presisi.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Model transaksi
+
+Setiap transaksi memiliki tipe `INCOME` atau `EXPENSE`, nominal positif, kategori, keterangan opsional, tanggal transaksi, serta timestamp pembuatan dan perubahan. Database juga memiliki check constraint yang menolak nominal nol atau negatif.
